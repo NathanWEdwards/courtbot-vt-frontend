@@ -9,5 +9,5 @@ export type Case = {
   date: Date;
 
   /** @member {String Address of where the case takes place */
-  address: String;
+  address: string;
 }

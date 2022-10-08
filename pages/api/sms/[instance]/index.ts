@@ -39,7 +39,7 @@ const handleText = async (req:NextApiRequest, res:NextApiResponse, input:string,
       default:
       case 'idle':
         // get the case number from the text
-        const caseNumber = input.trim();
+        const caseNumber = input.trim(); // eslint-disable-line no-case-declarations
 
         // see if the case number matches the testcase or the regex
         if (instanceMethods.getNumberRegex().test(caseNumber) || caseNumber.toLowerCase() === 'testcase') {
@@ -110,12 +110,12 @@ const handleText = async (req:NextApiRequest, res:NextApiResponse, input:string,
         break;
       case 'case_found':
         // get the case from the cookie
-        const cases = JSON.parse(req.cookies.cases);
+        const cases = JSON.parse(req.cookies.cases); // eslint-disable-line no-case-declarations
         // get the text response
-        const response = input.trim();
+        const response = input.trim(); // eslint-disable-line no-case-declarations
         // parse the number out of the response
         // we'll do a check later to see if it was a valid number
-        const index = parseInt(response) - 1;
+        const index = parseInt(response) - 1; // eslint-disable-line no-case-declarations
 
         // no reminder, but let's send information their way
         if (response.toLowerCase() === 'no') {
@@ -134,7 +134,7 @@ const handleText = async (req:NextApiRequest, res:NextApiResponse, input:string,
         else if (cases.length === 1) {
           // let's check for a yes
           if (response.toLowerCase() === 'yes') {
-            let c = cases[0];
+            const c = cases[0];
             await ReminderDao.create({
               uid: c.uid,
               number: c.number,
@@ -178,7 +178,7 @@ const handleText = async (req:NextApiRequest, res:NextApiResponse, input:string,
         else {
           // if a number was given lets check to see if it maps to a case index
           if (response === parseInt(response).toString() && index >= 0 && index < cases.length) {
-            let c = cases[index];
+            const c = cases[index];
             await ReminderDao.create({
               uid: c.uid,
               number: c.number,
@@ -253,4 +253,4 @@ export default async function handler(req:NextApiRequest, res:NextApiResponse) {
   }
 
   res.end();
-};
+}

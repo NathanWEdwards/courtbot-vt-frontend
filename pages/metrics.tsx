@@ -1,6 +1,6 @@
 import { GetServerSideProps } from 'next';
 import Head from 'next/head';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, createRef, useState } from 'react';
 import axios from 'axios';
 import { Chart, registerables } from 'chart.js';
 import { checkBasicAuthForMetrics } from '../utils/basic-auth';
@@ -21,29 +21,31 @@ const ranges = [
   },
 ];
 
-export const getServerSideProps: GetServerSideProps = async (context) => {
-  const {req, res} = context;
+// export const getServerSideProps: GetServerSideProps = async (context) => {
+//   const {req, res} = context;
 
-  // @ts-ignore
-  await checkBasicAuthForMetrics(req, res)
+//   await checkBasicAuthForMetrics(req, res)
 
-  return {
-    props: {}
-  }
-}
+//   return {
+//     props: {}
+//   }
+// }
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [chart, setChart] = useState<Chart>();
   const [range, setRange] = useState(30);
-  const canvas = useRef(null);
+  const canvas = createRef<HTMLCanvasElement>();
+  let context: CanvasRenderingContext2D | null = null;
 
   useEffect(() => {
     Chart.register(...registerables);
 
     // create chart
-    // @ts-ignore
-    const context = canvas?.current?.getContext('2d');
+    if (canvas.current != undefined ) {
+      context = canvas.current.getContext('2d');
+    }
+
     if (context) {
       const myChart = Chart.getChart(context);
       if (myChart) { myChart.destroy(); }
@@ -93,8 +95,7 @@ export default function Home() {
         chart.data = {
           datasets: [
             {
-              // @ts-ignore
-              data: data.activity.map(o => {
+              data: data.activity.map( (o: ActivityEntry) => {
                 return {
                   x: o.date,
                   y: o['case found'],
@@ -105,8 +106,7 @@ export default function Home() {
               label: 'Case Found',
             },
             {
-              // @ts-ignore
-              data: data.activity.map(o => {
+              data: data.activity.map( (o: ActivityEntry) => {
                 return {
                   x: o.date,
                   y: o['case not found'],
@@ -117,8 +117,7 @@ export default function Home() {
               label: 'Case Not Found',
             },
             {
-              // @ts-ignore
-              data: data.activity.map(o => {
+              data: data.activity.map( (o: ActivityEntry) => {
                 return {
                   x: o.date,
                   y: o['case not matching regex'],

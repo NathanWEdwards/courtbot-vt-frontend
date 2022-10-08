@@ -22,72 +22,115 @@ export default async function handler(req:NextApiRequest, res:NextApiResponse) {
     const timezone = req.query.timezone ? Array.isArray(req.query.timezone) ? req.query.timezone[0]: req.query.timezone : 'America/New_York';
     const minDate = moment.tz(timezone).startOf('day').subtract(range - 1, 'days');
   
-    switch (method) {
-      case 'GET':
-        const logEntries:Array<logEntry> = await LogDao.aggregate([
-          {
-            '$match': {
-              'meta.instance': instance,
-              'meta.service': `/api/sms/${instance}`,
-              'meta.state': 'idle',
-              timestamp: { $gte: minDate.toDate() },
-            }
-          },
-          {
-            '$project': {
-              'localDate': {
-                '$dateToString': {
-                  'date': '$timestamp', 
-                  'timezone': 'America/New_York', 
-                  'format': '%Y-%m-%d'
-                }
-              }, 
-              'type': '$meta.result'
-            }
-          },
-          {
-            '$group': {
-              '_id': {
-                'date': '$localDate', 
-                'type': '$type'
-              }, 
-              'count': {
-                '$sum': 1
+    if (method === 'GET') {
+      const logEntries:Array<logEntry> = await LogDao.aggregate([
+        {
+          '$match': {
+            'meta.instance': instance,
+            'meta.service': `/api/sms/${instance}`,
+            'meta.state': 'idle',
+            timestamp: { $gte: minDate.toDate() },
+          }
+        },
+        {
+          '$project': {
+            'localDate': {
+              '$dateToString': {
+                'date': '$timestamp', 
+                'timezone': 'America/New_York', 
+                'format': '%Y-%m-%d'
               }
+            }, 
+            'type': '$meta.result'
+          }
+        },
+        {
+          '$group': {
+            '_id': {
+              'date': '$localDate', 
+              'type': '$type'
+            }, 
+            'count': {
+              '$sum': 1
             }
           }
-        ]).exec();
-
-        // build a map of dates
-        const activity = new Map<string, ActivityEntry>();
-        for (let i = 0; i < range; i++) {
-          const date = minDate.toISOString().split('T')[0];
-          activity.set(date, {
-            date,
-            "case found": 0,
-            "case not found": 0,
-            "case not matching regex": 0,
-          });
-          minDate.add(1, 'days');
         }
+      ]).exec();
 
-        // go thru each aggregation and add to map
-        logEntries.forEach(o => {
-          // @ts-ignore
-          activity.get(o._id.date)[o._id.type] = o.count;
+      // build a map of dates
+      const activity = new Map<string, ActivityEntry>();
+      for (let i = 0; i < range; i++) {
+        const date = minDate.toISOString().split('T')[0];
+        activity.set(date, {
+          date,
+          'case found': 0,
+          'case not found': 0,
+          'case not matching regex': 0,
         });
+        minDate.add(1, 'days');
+      }
 
-        res.send({
-          activity: Array.from(activity.values()),
-        });
-        break;
-      default:
+      // go thru each aggregation and add to map
+      logEntries.forEach((o: logEntry) => {
+        const date: string = o._id.date;
+        const type: string = o._id.type;
+        const count: number = o.count;
+
+        if (activity.has(date) !== true) {
+          const cookies: { [key: string] : string} = req.cookies;
+          const input = '';
+          const phone = '';
+          const state: string = cookies.state || 'idle';
+          logger.warn(`${phone} (${instance})[${state}]: unexpected input`, { metadata: {
+            service: `/api/sms/${instance}`,
+            cookies,
+            instance,
+            input,
+            phone,
+            state,
+            result: 'unexpected input',
+          }});
+        }
+          const elem: ActivityEntry | undefined = activity.get(date);
+
+          // The ActivityEntry object must be defined
+          if (elem != undefined) {
+
+            if (type === 'case found' ) {
+              elem['case found'] = count;
+            } else if (type === 'case not found') {
+              elem['case not found'] = count;
+            } else if (type ===  'case not matching regex') {
+              elem['case not matching regex'] = count;
+            } else {
+                const cookies: { [key: string] : string} = req.cookies;
+                const input = '';
+                const phone = '';
+                const state: string = cookies.state || 'idle';
+              logger.warn(`${phone} (${instance})[${state}]: unexpected input`, { metadata: {
+                service: `/api/sms/${instance}`,
+                cookies,
+                instance,
+                input,
+                phone,
+                state,
+                result: 'unexpected input',
+              }});
+            }
+
+          }
+          
+      });
+
+      res.send({
+        activity: Array.from(activity.values()),
+      });
+    } else {
         res
           .status(400)
           .json({ success: false });
-        break;
     }
   }
 
   res.end();
-};
+}
