@@ -16,7 +16,7 @@ npm run dev
 
 ## required environmental variables
 
-can be stored in a file called `.env.local`
+can be stored in a file called `.env.local`.
 
 ```
 TWILIO_ACCOUNT_SID=Your-Account-SID

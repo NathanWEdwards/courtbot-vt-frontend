@@ -1,6 +1,5 @@
 import mongoose, { Connection, Model } from 'mongoose';
 import { Log, Notification, Reminder } from '../types';
-
 let conn:Connection;
 let NotificationDao:Model<Notification>;
 let ReminderDao:Model<Reminder>;

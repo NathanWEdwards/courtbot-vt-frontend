@@ -20,6 +20,7 @@
     "incremental": true
   },
   "include": [
+    "jest.d.ts",
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx"

@@ -1,28 +1,28 @@
 import moment from 'moment-timezone';
 import { Case } from '../types';
-const MessagingResponse = require('twilio').twiml.MessagingResponse;
+const MessagingResponse = require('twilio').twiml.MessagingResponse; // eslint-disable-line @typescript-eslint/no-var-requires
 
 const error = () => {
-  var resp = new MessagingResponse();
+  const resp = new MessagingResponse();
   resp.message(`Sorry something went wrong`);
   return resp;
 };
 
 const help = (helpText:string) => {
-  var resp = new MessagingResponse();
+  const resp = new MessagingResponse();
   resp.message(helpText);
   return resp;
 };
 
 const caseNotFound = (number:string) => {
-  var resp = new MessagingResponse();
+  const resp = new MessagingResponse();
   resp.message(`We did not find any cases that match ${number}`);
   return resp;
 };
 
 const caseFound = (cases:Case[], timezone = 'America/New_York') => {
-  var resp = new MessagingResponse();
-  let message:String;
+  const resp = new MessagingResponse();
+  let message:string;
 
 
   if (cases.length === 1) {
@@ -42,13 +42,13 @@ const caseFound = (cases:Case[], timezone = 'America/New_York') => {
 };
 
 const reminderYes = (c:Case) => {
-  var resp = new MessagingResponse();
+  const resp = new MessagingResponse();
   resp.message(`Reminder set for case (${c.number})`);
   return resp;
 };
 
 const reminderNo = (website:string) => {
-  var resp = new MessagingResponse();
+  const resp = new MessagingResponse();
   resp.message(`You said no so we won't text you a reminder. You can always go to ${website} for more information about your case.`);
   return resp;
 };

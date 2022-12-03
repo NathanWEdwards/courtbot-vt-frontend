@@ -1,5 +1,4 @@
 import moment from 'moment-timezone';
-import _ from 'lodash';
 
 import { Case, IInstanceMethods } from '../../../types';
 import { initialize, Event, EventDao } from '../dao/mongoose';
@@ -7,7 +6,7 @@ import { initialize, Event, EventDao } from '../dao/mongoose';
 const TIMEZONE = 'America/New_York';
 
 function toCase(o:Event, startDate?:Date, endDate?:Date):Case {
-  let c:Case = {
+  const c:Case = {
     uid: o._id,
     number: o.docket_number,
     date: o.date,
@@ -54,7 +53,7 @@ export default class VtInstanceMethods implements IInstanceMethods {
   async findAll(obj: { number?: string, startDate?: Date, endDate?: Date }) {
     await initialize();
 
-    let params:EventParams = {};
+    const params:EventParams = {};
 
     if (obj.number) {
       params.docket_number = new RegExp(`${obj.number}`, 'i');
@@ -72,7 +71,7 @@ export default class VtInstanceMethods implements IInstanceMethods {
     const allCases = await EventDao.find(params).lean().exec();
 
     const uniqueCases:Event[] = [];
-    const uniqueDocketNumbers:String[] = [];
+    const uniqueDocketNumbers:string[] = [];
     allCases.forEach(o => {
       if (uniqueDocketNumbers.indexOf(o.docket_number) === -1) {
         uniqueCases.push(o);

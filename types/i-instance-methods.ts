@@ -53,4 +53,4 @@ export interface IInstanceMethods {
  */
 export async function getInstanceMethods(instance: string):Promise<IInstanceMethods> {
   return new (await import(`../instances/${instance}`)).InstanceMethods();
-};
+}

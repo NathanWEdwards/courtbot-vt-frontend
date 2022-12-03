@@ -11,7 +11,7 @@ const maxAge = 60 * 15; // 10 minutes
 const handleText = async (req:NextApiRequest, res:NextApiResponse, input:string, phone:string) => {
   await initialize();
   const { instance } = req.query;
-  const instanceMethods = await getInstanceMethods(Array.isArray(instance) ? instance[0]: instance);
+  const instanceMethods = await getInstanceMethods(Array.isArray(instance) ? instance[0]: instance!);
   const cookies = req.cookies;
   try {
     // clear all cookies
@@ -39,7 +39,7 @@ const handleText = async (req:NextApiRequest, res:NextApiResponse, input:string,
       default:
       case 'idle':
         // get the case number from the text
-        const caseNumber = input.trim();
+        const caseNumber = input.trim(); // eslint-disable-line no-case-declarations
 
         // see if the case number matches the testcase or the regex
         if (instanceMethods.getNumberRegex().test(caseNumber) || caseNumber.toLowerCase() === 'testcase') {
@@ -110,12 +110,12 @@ const handleText = async (req:NextApiRequest, res:NextApiResponse, input:string,
         break;
       case 'case_found':
         // get the case from the cookie
-        const cases = JSON.parse(req.cookies.cases);
+        const cases = JSON.parse(req.cookies.cases!); // eslint-disable-line no-case-declarations
         // get the text response
-        const response = input.trim();
+        const response = input.trim(); // eslint-disable-line no-case-declarations
         // parse the number out of the response
         // we'll do a check later to see if it was a valid number
-        const index = parseInt(response) - 1;
+        const index = parseInt(response) - 1; // eslint-disable-line no-case-declarations
 
         // no reminder, but let's send information their way
         if (response.toLowerCase() === 'no') {
@@ -134,23 +134,32 @@ const handleText = async (req:NextApiRequest, res:NextApiResponse, input:string,
         else if (cases.length === 1) {
           // let's check for a yes
           if (response.toLowerCase() === 'yes') {
-            let c = cases[0];
-            await ReminderDao.create({
+            const c = cases[0];
+
+            const documentCount = await ReminderDao.countDocuments({
               uid: c.uid,
               number: c.number,
               phone,
-            });
+            }).exec();
 
-            logger.info(`${phone} (${instance})[${state}]: reminder set`, { metadata: {
-              service: `/api/sms/${instance}`,
-              cookies,
-              instance,
-              input,
-              phone,
-              case: c,
-              state,
-              result: 'reminder set',
-            }});
+            if (documentCount == 0) {
+              await ReminderDao.create({
+                uid: c.uid,
+                number: c.number,
+                phone,
+              });
+
+              logger.info(`${phone} (${instance})[${state}]: reminder set`, { metadata: {
+                service: `/api/sms/${instance}`,
+                cookies,
+                instance,
+                input,
+                phone,
+                case: c,
+                state,
+                result: 'reminder set',
+              }});
+            }
             res.send(smsResponse.reminderYes(c).toString());
           }
           // send help due to unexpected response
@@ -178,23 +187,33 @@ const handleText = async (req:NextApiRequest, res:NextApiResponse, input:string,
         else {
           // if a number was given lets check to see if it maps to a case index
           if (response === parseInt(response).toString() && index >= 0 && index < cases.length) {
-            let c = cases[index];
-            await ReminderDao.create({
+            const c = cases[index];
+            const documentCount = await ReminderDao.countDocuments({
               uid: c.uid,
               number: c.number,
               phone,
-            });
+            }).exec();
 
-            logger.info(`${phone} (${instance})[${state}]: reminder set`, { metadata: {
-              service: `/api/sms/${instance}`,
-              cookies,
-              instance,
-              input,
-              phone,
-              case: c,
-              state,
-              result: 'reminder set',
-            }});
+            // Only create a document if a reminder document matching the case uid and phone number exists.
+            if (documentCount == 0) {
+              await ReminderDao.create({
+                uid: c.uid,
+                number: c.number,
+                phone,
+              });
+
+              logger.info(`${phone} (${instance})[${state}]: reminder set`, { metadata: {
+                service: `/api/sms/${instance}`,
+                cookies,
+                instance,
+                input,
+                phone,
+                case: c,
+                state,
+                result: 'reminder set',
+              }});
+          }
+            
             res.send(smsResponse.reminderYes(c).toString());
           }
           // send help due to unexpected response
@@ -242,7 +261,7 @@ export default async function handler(req:NextApiRequest, res:NextApiResponse) {
         await handleText(req, res, req.body.Body, req.body.From);
         break;
       case 'GET':
-        await handleText(req, res, Array.isArray(req.query.text) ? req.query.text[0] : req.query.text, process.env.TWILIO_PHONE_NUMBER || '');
+        await handleText(req, res, Array.isArray(req.query.text) ? req.query.text[0] : req.query.text!, process.env.TWILIO_PHONE_NUMBER || '');
         break;
       default:
         res
@@ -253,4 +272,4 @@ export default async function handler(req:NextApiRequest, res:NextApiResponse) {
   }
 
   res.end();
-};
+}
