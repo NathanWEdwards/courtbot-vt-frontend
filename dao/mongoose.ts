@@ -1,6 +1,9 @@
+import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose, { Connection, Model } from 'mongoose';
 import { Log, Notification, Reminder } from '../types';
 
+
+let mongoServer: null | MongoMemoryServer;
 let conn:Connection;
 let NotificationDao:Model<Notification>;
 let ReminderDao:Model<Reminder>;
@@ -90,7 +93,12 @@ const LogSchema = new mongoose.Schema<Log>({
 
 async function initialize() {
   if (conn == null) {
-    conn = await mongoose.createConnection(process.env.MONGODB_URI || '', {
+    let uri = process.env.MONGODB_URI || '';
+    if (process.env.NODE_ENV == "development") {
+      mongoServer = await MongoMemoryServer.create({instance: {launchTimeout: 30000}});
+      uri = mongoServer.getUri();
+    }
+    conn = await mongoose.createConnection(uri, {
       useCreateIndex: true,
       useNewUrlParser: true,
       useUnifiedTopology: true,

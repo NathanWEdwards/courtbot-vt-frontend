@@ -8,7 +8,7 @@ import { initialize, ReminderDao } from '../../../../dao/mongoose';
 
 const maxAge = 60 * 15; // 10 minutes
 
-const handleText = async (req:NextApiRequest, res:NextApiResponse, input:string, phone:string) => {
+export const handleText = async (req:NextApiRequest, res:NextApiResponse, input:string, phone:string) => {
   await initialize();
   const { instance } = req.query;
   const instanceMethods = await getInstanceMethods(Array.isArray(instance) ? instance[0]: instance);
@@ -105,7 +105,7 @@ const handleText = async (req:NextApiRequest, res:NextApiResponse, input:string,
             state,
             result: 'case not matching regex',
           }});
-        res.send(smsResponse.help(instanceMethods.getHelpText()).toString());
+          res.send(smsResponse.help(instanceMethods.getHelpText()).toString());
         }
         break;
       case 'case_found':
@@ -234,22 +234,40 @@ const handleText = async (req:NextApiRequest, res:NextApiResponse, input:string,
 }
 
 export default async function handler(req:NextApiRequest, res:NextApiResponse) {
-  if (await checkBasicAuth(req, res)) {
+  if (process.env.NODE_ENV == 'development') {
+    const body = JSON.parse(req.body);
     const { method } = req
-  
-    switch (method) {
-      case 'POST':
-        await handleText(req, res, req.body.Body, req.body.From);
-        break;
-      case 'GET':
-        await handleText(req, res, Array.isArray(req.query.text) ? req.query.text[0] : req.query.text, process.env.TWILIO_PHONE_NUMBER || '');
-        break;
-      default:
-        res
-          .status(400)
-          .json({ success: false });
-        break;
-    }  
+      switch (method) {
+        case 'POST':
+          await handleText(req, res, body.Body, body.From);
+          break;
+        case 'GET':
+          await handleText(req, res, Array.isArray(req.query.text) ? req.query.text[0] : req.query.text, process.env.TWILIO_PHONE_NUMBER || '');
+          break;
+        default:
+          res
+            .status(400)
+            .json({ success: false });
+          break;
+      }  
+  } else {
+    if (await checkBasicAuth(req, res)) {
+      const { method } = req
+    
+      switch (method) {
+        case 'POST':
+          await handleText(req, res, req.body.Body, req.body.From);
+          break;
+        case 'GET':
+          await handleText(req, res, Array.isArray(req.query.text) ? req.query.text[0] : req.query.text, process.env.TWILIO_PHONE_NUMBER || '');
+          break;
+        default:
+          res
+            .status(400)
+            .json({ success: false });
+          break;
+      }  
+    }
   }
 
   res.end();

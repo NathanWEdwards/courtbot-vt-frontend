@@ -1,25 +1,60 @@
 import Head from 'next/head'
-import { useRef, useState } from 'react';
+import { ChangeEvent, createRef, FormEvent, useEffect, useRef, useState, } from 'react';
+import { XMLParser } from 'fast-xml-parser';
 
+// todo
+const initialInstance = () => {
+  return 'vt';
+}
 export default function Sms() {
-  const messages = useState([]);
-  const [ formData, setFormData ] = useState({});
-  const textareaRef = useRef();
+  const [ messages, setMessages] = useState<string[]>([]);
+  const [ formData, setFormData ] = useState<{message: any}>({message: ''});
+  const [ state, setState ] = useState<string>('idle');
+  const instance = useState(initialInstance());
+  let cookies = '{}';
+  const textareaRef = createRef<HTMLTextAreaElement>();
+  // todo: get/select instance
+  const instanceRef = createRef<HTMLSelectElement>();
 
-  const handleChange = (ev:Event) => {
+  const parser = new XMLParser();
+
+  const handleChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    const target = event?.target as HTMLTextAreaElement;
     setFormData({
       ...formData,
-      [ev?.target?.name]: ev?.target?.value,
+      [target?.name]: target?.value,
     });
   };
 
-  const onSend = (ev:Event) => {
+  const onSend = (ev: FormEvent<HTMLFormElement>) => {
     ev.preventDefault();
-    setFormData({
-      message: '',
-    });
-    textareaRef?.current?.focus();
-    console.log(formData);
+    fetch(`/api/sms/${instance[0]}`,
+      {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          Cookie: JSON.stringify({
+            state: state
+          })
+        },
+        body: JSON.stringify({
+          Body: formData!.message,
+          From: '01234567890'
+        })
+      }).then((res) => {
+        cookies = res.headers.get('cookies') || '';
+        res.text().then((text) => {
+          const response = parser.parse(text);
+          setMessages([
+            ...messages,
+            response.Response.Message
+          ]);
+        })
+        
+      });
+      setFormData({
+        message: '',
+      });
   };
 
   return (
@@ -34,13 +69,20 @@ export default function Sms() {
         </h1>
       </div>
 
+      <select ref={instanceRef}>
+        <option value="vt">VT</option>  
+      </select>
       <div className="grow">
-        Messages
+        <ul>
+          {Object.entries(messages).map(([idx, message]) => {
+            return <li key={idx}>{message}</li>
+          })}
+        </ul>
       </div>
 
       <div className="flex-none">
         <form onSubmit={onSend}>
-          <textarea ref={textareaRef} name="message" onChange={handleChange} value={formData?.message} />
+          <textarea ref={textareaRef} onChange={handleChange} name="message"/>
           <button type="submit">
             Send
           </button>
@@ -49,3 +91,4 @@ export default function Sms() {
     </div>
   )
 }
+
