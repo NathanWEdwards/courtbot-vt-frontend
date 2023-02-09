@@ -1,22 +1,23 @@
-import Head from 'next/head'
-import { ChangeEvent, createRef, FormEvent, useEffect, useRef, useState, } from 'react';
 import { XMLParser } from 'fast-xml-parser';
+import fs from 'fs';
+import { InferGetServerSidePropsType } from 'next';
+import Head from 'next/head';
+import path from 'path';
+import { ChangeEvent, createRef, FormEvent, useEffect, useRef, useState, } from 'react';
 
-// todo
-const initialInstance = () => {
-  return 'vt';
-}
-export default function Sms() {
+export default function Sms({ instances }: InferGetServerSidePropsType<typeof getServerSideProps>) {
   const [ messages, setMessages] = useState<string[]>([]);
   const [ formData, setFormData ] = useState<{message: any}>({message: ''});
+  const [ instance, setInstance ] = useState<string>(instances[0]);
   const [ state, setState ] = useState<string>('idle');
-  const instance = useState(initialInstance());
+
   let cookies = '{}';
   const textareaRef = createRef<HTMLTextAreaElement>();
-  // todo: get/select instance
-  const instanceRef = createRef<HTMLSelectElement>();
-
   const parser = new XMLParser();
+
+  const changeInstance = (event: ChangeEvent<HTMLSelectElement>) => {
+    setInstance(event.target.value);
+  }
 
   const handleChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     const target = event?.target as HTMLTextAreaElement;
@@ -28,7 +29,7 @@ export default function Sms() {
 
   const onSend = (ev: FormEvent<HTMLFormElement>) => {
     ev.preventDefault();
-    fetch(`/api/sms/${instance[0]}`,
+    fetch(`/api/sms/${instance}`,
       {
         method: 'POST',
         credentials: 'include',
@@ -42,7 +43,6 @@ export default function Sms() {
           From: '01234567890'
         })
       }).then((res) => {
-        cookies = res.headers.get('cookies') || '';
         res.text().then((text) => {
           const response = parser.parse(text);
           setMessages([
@@ -69,9 +69,13 @@ export default function Sms() {
         </h1>
       </div>
 
-      <select ref={instanceRef}>
-        <option value="vt">VT</option>  
-      </select>
+      <label>
+        <select aria-label='courtbot-instances' value={instance} onChange={changeInstance}>
+          {instances.map((instanceOption)=> {
+            return <option key={instanceOption} value={instanceOption}>{instanceOption.toUpperCase()}</option>
+          })}
+        </select> Instance
+      </label>
       <div className="grow">
         <ul>
           {Object.entries(messages).map(([idx, message]) => {
@@ -92,3 +96,13 @@ export default function Sms() {
   )
 }
 
+export async function getServerSideProps() {
+  const instanceDirectory = path.join(process.cwd(), '/instances/');
+  const directoryContents = fs.readdirSync(instanceDirectory);
+  const instances = directoryContents.filter((item) => {
+      return fs.statSync(path.join(instanceDirectory, item)).isDirectory();
+  });
+  return {
+    props: { instances }
+  }
+}
